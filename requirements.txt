@@ -1,0 +1,10 @@
+langchain
+langgraph
+langchain-openai
+pandas
+openpyxl
+python-dotenv
+matplotlib
+fpdf2
+markdown
+playwright
