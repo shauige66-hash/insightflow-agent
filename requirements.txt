@@ -8,3 +8,10 @@ matplotlib
 fpdf2
 markdown
 playwright
+fastapi
+uvicorn
+python-multipart
+pypdf
+langchain-text-splitters
+langchain-huggingface
+sentence-transformers

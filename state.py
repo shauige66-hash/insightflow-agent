@@ -32,6 +32,7 @@ class VisualizationResult(TypedDict):
 class ExecutionResult(TypedDict):
     task_id: str
     tool_used: Literal["python", "sql"]
+    code: str
     success: bool
     result: Any
     error: str | None
@@ -46,6 +47,28 @@ class TaskFailure(TypedDict):
     refine_count: int
 
 
+class InsightFlowState(TypedDict, total=False):
+    run_id: str
+
+    analysis_focus: str | None
+
+    data_sources: list[str]
+
+    tables: dict[str, TableResource]
+
+    data_context: dict[
+        str,
+        dict[str, Any]
+    ]
+
+    knowledge_sources: list[str]
+
+    retrieved_knowledge: list[str]
+
+    analysis_plan: list[AnalysisTask]
+
+
+
 # 工作流传递信息
 class InsightFlowState(TypedDict, total=False):
     run_id: str  # 每次workflow唯一编号
@@ -55,6 +78,10 @@ class InsightFlowState(TypedDict, total=False):
     data_sources: list[str]  # 文件数据
 
     tables: dict[str, TableResource]  # 数据表
+
+    knowledge_sources: list[str]    #用户提供业务知识文件
+
+    retrieved_knowledge: list[str]    # 针对当前分析问题实际检索出来的相关片段
 
     data_context: dict[str, dict[str, Any]]  # Adaptive Context 生成的数据上下文
 

@@ -86,7 +86,8 @@ def build_result_dataframe(
 
 
 def create_plot_tool(
-    tables: dict[str, TableResource]
+    tables: dict[str, TableResource],
+    output_dir: str
 ):
 
     @tool
@@ -157,20 +158,19 @@ def create_plot_tool(
             "axes.unicode_minus"
         ] = False
 
-        output_dir = Path(
-            "outputs"
+        plot_output_dir = Path(
+        output_dir
         )
 
-        output_dir.mkdir(
+        plot_output_dir.mkdir(
             parents=True,
             exist_ok=True
         )
 
         output_path = (
-            output_dir
+            plot_output_dir
             / f"{chart_id}.png"
         )
-
         safe_builtins = {
             "abs": abs,
             "all": all,

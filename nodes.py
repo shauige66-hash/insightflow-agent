@@ -20,6 +20,7 @@ from agents.plot_repair import repair_plot_code
 from pathlib import Path
 from utils.run_logger import log_event
 from time import perf_counter
+from rag.knowledge_service import build_and_retrieve_knowledge
 
 def loader_node(
     state: InsightFlowState
@@ -47,31 +48,78 @@ def context_node(
     }
 
 
+def knowledge_retrieval_node(
+    state: InsightFlowState
+) -> dict:
+
+    knowledge_sources = state.get(
+        "knowledge_sources",
+        []
+    )
+
+    if not knowledge_sources:
+        return {
+            "retrieved_knowledge": []
+        }
+
+    analysis_focus = state.get(
+        "analysis_focus"
+    )
+
+    query = (
+        analysis_focus
+        or "与当前数据分析相关的业务规则、指标定义和术语"
+    )
+
+    retrieved_knowledge = (
+        build_and_retrieve_knowledge(
+            knowledge_sources=knowledge_sources,
+            query=query
+        )
+    )
+
+    return {
+        "retrieved_knowledge": retrieved_knowledge
+    }
+
 
 def planner_node(
     state: InsightFlowState
 ) -> dict:
 
+    retrieved_knowledge = state.get(
+        "retrieved_knowledge",
+        []
+    )
+
     plan = create_analysis_plan(
         contexts=state["data_context"],
-        analysis_focus=state.get("analysis_focus")
+        analysis_focus=state.get(
+            "analysis_focus"
+        ),
+        retrieved_knowledge=retrieved_knowledge
     )
+
     run_id = state.get("run_id")
 
     if run_id is not None:
-            log_event(
-                run_id=run_id,
-                node="planner",
-                event="plan_created",
-                status="success",
-                details={
-                    "task_count": len(plan),
-                    "task_ids": [
-                        task["task_id"]
-                        for task in plan
-                    ]
-                }
-            )
+        log_event(
+            run_id=run_id,
+            node="planner",
+            event="plan_created",
+            status="success",
+            details={
+                "task_count": len(plan),
+                "task_ids": [
+                    task["task_id"]
+                    for task in plan
+                ],
+                "retrieved_knowledge_count": len(
+                    retrieved_knowledge
+                )
+            }
+        )
+
     return {
         "analysis_plan": plan,
         "current_task_index": 0
@@ -157,7 +205,8 @@ def execution_node(
                 "target_tables": task[
                     "target_tables"
                 ]
-            }
+            },
+            duration_ms=duration_ms
         )
 
     return {
@@ -725,39 +774,69 @@ def artifact_node(
     state: InsightFlowState
 ) -> dict:
 
-    report_content = state["report_content"]
+    report_content = state[
+        "report_content"
+    ]
 
     if report_content is None:
         raise ValueError(
             "Report content is missing."
         )
 
+    run_id = state.get(
+        "run_id"
+    )
+
+    if run_id is None:
+        raise ValueError(
+            "Run ID is missing."
+        )
+
+    output_dir = (
+        Path("outputs")
+        / run_id
+    )
+
+    output_dir.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
     markdown_path = save_markdown_report(
-        report_content
+        report_content,
+        output_path=str(
+            output_dir
+            / "analysis_report.md"
+        )
     )
 
     html_path = save_html_report(
-        report_content
+        report_content,
+        output_path=str(
+            output_dir
+            / "analysis_report.html"
+        )
     )
 
     pdf_path = save_pdf_report(
-        html_path
+        html_path,
+        output_path=str(
+            output_dir
+            / "analysis_report.pdf"
+        )
     )
 
-    run_id = state.get("run_id")
-
-    if run_id is not None:
-        log_event(
-            run_id=run_id,
-            node="artifact",
-            event="report_artifacts_saved",
-            status="success",
-            details={
-                "markdown_path": markdown_path,
-                "html_path": html_path,
-                "pdf_path": pdf_path
-            }
-        )
+    log_event(
+        run_id=run_id,
+        node="artifact",
+        event="report_artifacts_saved",
+        status="success",
+        details={
+            "markdown_path": markdown_path,
+            "html_path": html_path,
+            "pdf_path": pdf_path
+        }
+    )
 
     previous_artifacts = state.get(
         "artifacts",
@@ -902,7 +981,13 @@ def plot_generation_node(
                 "chart_type": visualization_task[
                     "chart_type"
                 ],
-                "target_tables": target_tables
+                "target_tables": target_tables,
+                "generation_attempts": generation[
+                    "attempts"
+                ],
+                "generation_retry_errors": generation[
+                    "retry_errors"
+                ]
             }
         )
 
@@ -965,8 +1050,21 @@ def plot_execution_node(
             f"for source task: {source_task_id}"
         )
 
+    run_id = state.get("run_id")
+
+    if run_id is None:
+        raise ValueError(
+            "Run ID is missing."
+        )
+
+    output_dir = (
+        Path("outputs")
+        / run_id
+    )
+
     plot_tool = create_plot_tool(
-        state["tables"]
+        state["tables"],
+        output_dir=str(output_dir)
     )
 
     execution = plot_tool.invoke({

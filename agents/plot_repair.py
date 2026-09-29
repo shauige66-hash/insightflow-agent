@@ -9,7 +9,7 @@ from langchain_core.prompts import PromptTemplate
 
 from core.llm import create_llm
 from state import ExecutionResult, VisualizationTask
-
+from utils.llm_retry import invoke_json_with_retry
 
 PLOT_REPAIR_PROMPT = """
 你是一个数据可视化代码修复 Agent。
@@ -156,27 +156,32 @@ def repair_plot_code(
 
     chain = prompt | llm | parser
 
-    result = chain.invoke({
-        "visualization_task": json.dumps(
-            visualization_task,
-            ensure_ascii=False,
-            indent=2,
-            default=str
-        ),
-        "execution_result": json.dumps(
-            execution_result,
-            ensure_ascii=False,
-            indent=2,
-            default=str
-        ),
-        "data_context": json.dumps(
-            data_context,
-            ensure_ascii=False,
-            indent=2,
-            default=str
-        ),
-        "code": code,
-        "error": error
-    })
+    inputs = {
+    "visualization_task": json.dumps(
+        visualization_task,
+        ensure_ascii=False,
+        indent=2,
+        default=str
+    ),
+    "execution_result": json.dumps(
+        execution_result,
+        ensure_ascii=False,
+        indent=2,
+        default=str
+    ),
+    "data_context": json.dumps(
+        data_context,
+        ensure_ascii=False,
+        indent=2,
+        default=str
+    ),
+    "code": code,
+    "error": error
+}
+
+    result = invoke_json_with_retry(
+        chain,
+        inputs
+    )
 
     return result["code"]

@@ -8,6 +8,7 @@ from langchain_core.prompts import PromptTemplate
 
 from core.llm import create_llm
 from state import AnalysisTask, ExecutionResult, VisualizationTask
+from utils.llm_retry import invoke_json_with_retry
 
 
 VISUALIZATION_PROMPT = """
@@ -110,25 +111,30 @@ def create_visualization_plan(
 
     chain = prompt | llm | parser
 
-    result = chain.invoke({
-        "analysis_plan": json.dumps(
-            analysis_plan,
-            ensure_ascii=False,
-            indent=2,
-            default=str
-        ),
-        "execution_results": json.dumps(
-            execution_results,
-            ensure_ascii=False,
-            indent=2,
-            default=str
-        ),
-        "failed_tasks": json.dumps(
-            failed_tasks,
-            ensure_ascii=False,
-            indent=2,
-            default=str
-        )
-    })
+    inputs = {
+    "analysis_plan": json.dumps(
+        analysis_plan,
+        ensure_ascii=False,
+        indent=2,
+        default=str
+    ),
+    "execution_results": json.dumps(
+        execution_results,
+        ensure_ascii=False,
+        indent=2,
+        default=str
+    ),
+    "failed_tasks": json.dumps(
+        failed_tasks,
+        ensure_ascii=False,
+        indent=2,
+        default=str
+    )
+}
+
+    result = invoke_json_with_retry(
+        chain,
+        inputs
+    )
 
     return result["charts"]

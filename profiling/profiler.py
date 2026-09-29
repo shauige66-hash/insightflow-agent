@@ -30,64 +30,33 @@ def build_light_profile(tables: dict[str, TableResource]) -> dict[str, dict[str,
 
 
 # 分析DataFrame
-def _profile_dataframe(df: pd.DataFrame) -> dict[str, Any]:
+def _profile_dataframe(
+    df: pd.DataFrame,
+    source_type: str
+) -> dict[str, Any]:
+
     dtypes = {}
     missing_values = {}
 
     for column in df.columns:
-        dtypes[column] = str(df[column].dtype)
-        missing_values[column] = int(df[column].isna().sum())
+        dtypes[column] = str(
+            df[column].dtype
+        )
+        missing_values[column] = int(
+            df[column].isna().sum()
+        )
 
     return {
+        "source_type": source_type,
         "row_count": len(df),
         "column_count": len(df.columns),
         "columns": list(df.columns),
         "dtypes": dtypes,
         "missing_values": missing_values,
-        "head_sample": df.head(3).to_dict(orient="records"),
-        "tail_sample": df.tail(3).to_dict(orient="records")
-    }
-
-def _profile_sqlite(resource: TableResource) -> dict[str, Any]:
-
-    table_name = resource.database_table
-
-    if table_name is None:
-        raise ValueError(
-            f"SQLite table name missing: {resource.name}"
-        )
-
-    safe_name = table_name.replace('"', '""')
-
-    with sqlite3.connect(resource.source_path) as connection:
-
-        schema_rows = connection.execute(
-            f'PRAGMA table_info("{safe_name}")'
-        ).fetchall()
-
-        row_count = connection.execute(
-            f'SELECT COUNT(*) FROM "{safe_name}"'
-        ).fetchone()[0]
-
-        sample_df = pd.read_sql_query(
-            f'SELECT * FROM "{safe_name}" LIMIT 3',
-            connection
-        )
-
-    return {
-        "source_type": "sqlite",
-        "row_count": row_count,
-        "column_count": len(schema_rows),
-
-        "columns": [
-            {
-                "name": row[1],
-                "dtype": row[2]
-            }
-            for row in schema_rows
-        ],
-
-        "head_sample": sample_df.to_dict(
+        "head_sample": df.head(3).to_dict(
+            orient="records"
+        ),
+        "tail_sample": df.tail(3).to_dict(
             orient="records"
         )
     }

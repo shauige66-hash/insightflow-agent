@@ -4,6 +4,7 @@ from langgraph.graph import StateGraph, START, END
 from state import InsightFlowState
 from nodes import (
     loader_node,
+    knowledge_retrieval_node,
     context_node,
     planner_node,
     router_node,
@@ -30,6 +31,7 @@ from conditions import (
     route_after_advance,
     route_after_plot_execution,
     route_after_chart_advance,
+    route_after_visualization_plan,
 )
 
 
@@ -47,6 +49,11 @@ def create_workflow():
     graph.add_node(
         "context",
         context_node
+    )
+
+    graph.add_node(
+    "knowledge_retrieval",
+    knowledge_retrieval_node
     )
 
     graph.add_node(
@@ -142,8 +149,14 @@ def create_workflow():
         "context"
     )
 
+  
     graph.add_edge(
-        "context",
+    "context",
+    "knowledge_retrieval"
+)
+
+    graph.add_edge(
+        "knowledge_retrieval",
         "planner"
     )
 
@@ -206,9 +219,13 @@ def create_workflow():
         }
     )
 
-    graph.add_edge(
-    "visualization_planner",
-    "plot_generation"
+    graph.add_conditional_edges(
+        "visualization_planner",
+        route_after_visualization_plan,
+        {
+            "plot_generation": "plot_generation",
+            "report": "report",
+        }
     )
 
     graph.add_edge(

@@ -8,6 +8,8 @@ from langchain_core.prompts import PromptTemplate
 
 from core.llm import create_llm
 from state import AnalysisTask, ExecutionResult
+from utils.llm_retry import invoke_json_with_retry
+
 
 
 CRITIC_PROMPT = """
@@ -63,24 +65,29 @@ def review_execution_result(
 
     chain = prompt | llm | parser
 
-    result = chain.invoke({
-        "task": json.dumps(
-            task,
-            ensure_ascii=False,
-            indent=2
-        ),
-        "data_context": json.dumps(
-            data_context,
-            ensure_ascii=False,
-            indent=2,
-            default=str
-        ),
-        "execution_result": json.dumps(
-            execution_result,
-            ensure_ascii=False,
-            indent=2,
-            default=str
-        )
-    })
+    inputs = {
+    "task": json.dumps(
+        task,
+        ensure_ascii=False,
+        indent=2
+    ),
+    "data_context": json.dumps(
+        data_context,
+        ensure_ascii=False,
+        indent=2,
+        default=str
+    ),
+    "execution_result": json.dumps(
+        execution_result,
+        ensure_ascii=False,
+        indent=2,
+        default=str
+    )
+}
+
+    result = invoke_json_with_retry(
+        chain,
+        inputs
+    )
 
     return result

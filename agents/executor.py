@@ -6,7 +6,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import PromptTemplate
 from core.llm import create_llm
 from state import AnalysisTask
-
+from utils.llm_retry import invoke_json_with_retry
 
 EXECUTION_PROMPT = """
 你是一个数据分析执行 Agent。
@@ -131,19 +131,24 @@ def generate_execution_code(
 
     chain = prompt | llm | parser
 
-    result = chain.invoke({
-        "task": json.dumps(
-            task,
-            ensure_ascii=False,
-            indent=2
-        ),
-        "data_context": json.dumps(
-            data_context,
-            ensure_ascii=False,
-            indent=2,
-            default=str
-        ),
-        "route": route
-    })
+    inputs = {
+    "task": json.dumps(
+        task,
+        ensure_ascii=False,
+        indent=2
+    ),
+    "data_context": json.dumps(
+        data_context,
+        ensure_ascii=False,
+        indent=2,
+        default=str
+    ),
+    "route": route
+}
+
+    result = invoke_json_with_retry(
+        chain,
+        inputs
+    )
 
     return result["code"]

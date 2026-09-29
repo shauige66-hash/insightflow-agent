@@ -106,3 +106,19 @@ def route_after_plot_execution(
         return "plot_repair"
 
     return "advance_chart"
+
+
+
+def route_after_visualization_plan(
+    state: InsightFlowState
+) -> Literal["plot_generation", "report"]:
+
+    visualization_plan = state.get(
+        "visualization_plan",
+        []
+    )
+
+    if visualization_plan:
+        return "plot_generation"
+
+    return "report"

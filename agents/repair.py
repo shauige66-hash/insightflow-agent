@@ -8,7 +8,7 @@ from langchain_core.prompts import PromptTemplate
 
 from core.llm import create_llm
 from state import AnalysisTask
-
+from utils.llm_retry import invoke_json_with_retry
 
 REPAIR_PROMPT = """
 你是一个数据分析代码修复 Agent。
@@ -97,7 +97,7 @@ REPAIR_PROMPT = """
 
    - 修复 SQL 时，SQLite 的 FROM 和 JOIN 必须使用
     data_context 中对应的 database_table 作为真实表名。
-    
+
    - 不要把类似 sales.orders 这样的资源名直接当作 SQLite 表名使用。
 
    - 不要为了消除执行错误，
@@ -143,21 +143,26 @@ def repair_execution_code(
 
     chain = prompt | llm | parser
 
-    result = chain.invoke({
-        "task": json.dumps(
-            task,
-            ensure_ascii=False,
-            indent=2
-        ),
-        "data_context": json.dumps(
-            data_context,
-            ensure_ascii=False,
-            indent=2,
-            default=str
-        ),
-        "route": route,
-        "code": code,
-        "error": error
-    })
+    inputs = {
+    "task": json.dumps(
+        task,
+        ensure_ascii=False,
+        indent=2
+    ),
+    "data_context": json.dumps(
+        data_context,
+        ensure_ascii=False,
+        indent=2,
+        default=str
+    ),
+    "route": route,
+    "code": code,
+    "error": error
+}
+
+    result = invoke_json_with_retry(
+        chain,
+        inputs
+    )
 
     return result["code"]

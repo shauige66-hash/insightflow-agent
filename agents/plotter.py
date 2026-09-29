@@ -133,7 +133,7 @@ def generate_plot_code(
     visualization_task: VisualizationTask,
     data_context: dict[str, Any],
     execution_result: ExecutionResult
-) -> str:
+) -> dict[str, Any]:
 
     llm = create_llm()
 

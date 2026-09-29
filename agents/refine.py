@@ -8,7 +8,7 @@ from langchain_core.prompts import PromptTemplate
 
 from core.llm import create_llm
 from state import AnalysisTask, ExecutionResult
-
+from utils.llm_retry import invoke_json_with_retry
 
 REFINE_PROMPT = """
 你是一个数据分析代码改进 Agent。
@@ -153,27 +153,32 @@ def refine_execution_code(
 
     chain = prompt | llm | parser
 
-    result = chain.invoke({
-        "task": json.dumps(
-            task,
-            ensure_ascii=False,
-            indent=2
-        ),
-        "data_context": json.dumps(
-            data_context,
-            ensure_ascii=False,
-            indent=2,
-            default=str
-        ),
-        "route": route,
-        "code": code,
-        "execution_result": json.dumps(
-            execution_result,
-            ensure_ascii=False,
-            indent=2,
-            default=str
-        ),
-        "critic_feedback": critic_feedback
-    })
+    inputs = {
+    "task": json.dumps(
+        task,
+        ensure_ascii=False,
+        indent=2
+    ),
+    "data_context": json.dumps(
+        data_context,
+        ensure_ascii=False,
+        indent=2,
+        default=str
+    ),
+    "route": route,
+    "code": code,
+    "execution_result": json.dumps(
+        execution_result,
+        ensure_ascii=False,
+        indent=2,
+        default=str
+    ),
+    "critic_feedback": critic_feedback
+}
+
+    result = invoke_json_with_retry(
+        chain,
+        inputs
+    )
 
     return result["code"]
