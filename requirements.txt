@@ -15,4 +15,4 @@ pypdf
 langchain-text-splitters
 langchain-huggingface
 sentence-transformers
-numpynumpy
+numpy
