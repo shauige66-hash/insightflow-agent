@@ -59,7 +59,8 @@ def knowledge_retrieval_node(
 
     if not knowledge_sources:
         return {
-            "retrieved_knowledge": []
+            "retrieved_knowledge": [],
+            "retrieved_knowledge_details": []
         }
 
     analysis_focus = state.get(
@@ -71,15 +72,22 @@ def knowledge_retrieval_node(
         or "与当前数据分析相关的业务规则、指标定义和术语"
     )
 
-    retrieved_knowledge = (
+    retrieved_knowledge_details = (
         build_and_retrieve_knowledge(
             knowledge_sources=knowledge_sources,
             query=query
         )
     )
 
+    retrieved_knowledge = [
+        item["content"]
+        for item in retrieved_knowledge_details
+        if item.get("content")
+    ]
+
     return {
-        "retrieved_knowledge": retrieved_knowledge
+        "retrieved_knowledge": retrieved_knowledge,
+        "retrieved_knowledge_details": (retrieved_knowledge_details)
     }
 
 
@@ -181,10 +189,16 @@ def execution_node(
             "Current tool is missing."
         )
 
+    retrieved_knowledge = state.get(
+    "retrieved_knowledge",
+    []
+    )
+
     code = generate_execution_code(
         task=task,
         data_context=data_context,
-        route=tool
+        route=tool,
+        retrieved_knowledge=retrieved_knowledge
     )
 
     duration_ms = (
@@ -218,6 +232,8 @@ def execution_node(
 def tool_execution_node(
     state: InsightFlowState
 ) -> dict:
+
+
 
     index = state["current_task_index"]
     task = state["analysis_plan"][index]
@@ -314,6 +330,11 @@ def repair_node(
     state: InsightFlowState
 ) -> dict:
 
+    retrieved_knowledge = state.get(
+    "retrieved_knowledge",
+    []
+)
+
     index = state["current_task_index"]
     task = state["analysis_plan"][index]
 
@@ -340,7 +361,8 @@ def repair_node(
         data_context=data_context,
         route=tool,
         code=code,
-        error=error
+        error=error,
+        retrieved_knowledge=retrieved_knowledge
     )
 
     retry_count = state.get(
@@ -455,7 +477,10 @@ def advance_task_node(
 def critic_node(
     state: InsightFlowState
 ) -> dict:
-
+    retrieved_knowledge = state.get(
+    "retrieved_knowledge",
+    []
+)
     index = state["current_task_index"]
     task = state["analysis_plan"][index]
 
@@ -469,7 +494,8 @@ def critic_node(
     review = review_execution_result(
         task=task,
         data_context=data_context,
-        execution_result=execution_result
+        execution_result=execution_result,
+        retrieved_knowledge=retrieved_knowledge
     )
 
     run_id = state.get("run_id")
@@ -509,7 +535,11 @@ def critic_node(
 def refine_node(
     state: InsightFlowState
 ) -> dict:
-
+    
+    retrieved_knowledge = state.get(
+    "retrieved_knowledge",
+    []
+)
     index = state["current_task_index"]
 
     task = state["analysis_plan"][index]
@@ -552,7 +582,8 @@ def refine_node(
         route=tool,
         code=code,
         execution_result=execution_result,
-        critic_feedback=critic_feedback
+        critic_feedback=critic_feedback,
+        retrieved_knowledge=retrieved_knowledge
     )
 
     refine_count = state.get(

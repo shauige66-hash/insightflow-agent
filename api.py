@@ -14,6 +14,8 @@ from utils.run_logger import create_run_id
 from fastapi.responses import FileResponse
 from pydantic import WithJsonSchema
 from typing import Annotated
+import pandas as pd
+import numpy as np
 
 
 
@@ -27,6 +29,19 @@ UploadFile = Annotated[
     )
 ]
 UPLOAD_DIR = Path("uploads")
+DATA_EXTENSIONS = {
+    ".csv",
+    ".xlsx",
+    ".db",
+    ".sqlite",
+    ".sqlite3"
+}
+
+KNOWLEDGE_EXTENSIONS = {
+    ".md",
+    ".txt",
+    ".pdf"
+}
 app = FastAPI(
     
     title="InsightFlow API",
@@ -37,7 +52,56 @@ app = FastAPI(
     version="0.1.0"
 )
 
+# 把 Agent 执行结果转换为 FastAPI 可以返回的 JSON 数据。
+def make_json_safe(
+    value
+):
 
+    if isinstance(
+        value,
+        pd.DataFrame
+    ):
+        return value.to_dict(
+            orient="records"
+        )
+
+    if isinstance(
+        value,
+        pd.Series
+    ):
+        return value.tolist()
+
+    if isinstance(
+        value,
+        pd.Timestamp
+    ):
+        return value.isoformat()
+
+    if isinstance(
+        value,
+        np.generic
+    ):
+        return value.item()
+
+    if isinstance(
+        value,
+        dict
+    ):
+        return {
+            key: make_json_safe(item)
+            for key, item in value.items()
+        }
+
+    if isinstance(
+        value,
+        (list, tuple)
+    ):
+        return [
+            make_json_safe(item)
+            for item in value
+        ]
+
+    return value
 
 
 
@@ -53,6 +117,7 @@ def health_check() -> dict[str, str]:
 @app.post("/analyze/upload")
 def analyze_upload(
     files: list[UploadFile] = File(...),
+    knowledge_files: list[UploadFile] | None = File(None),
     analysis_focus: str | None = Form(None)
 ) -> dict:
 
@@ -62,19 +127,41 @@ def analyze_upload(
         UPLOAD_DIR / run_id
     )
 
-    run_upload_dir.mkdir(
+    data_dir = (
+        run_upload_dir
+        / "data"
+    )
+
+    knowledge_dir = (
+        run_upload_dir
+        / "knowledge"
+    )
+
+    data_dir.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    knowledge_dir.mkdir(
         parents=True,
         exist_ok=True
     )
 
     data_sources = []
+    knowledge_sources = []
 
-    allowed_suffixes = {
+    allowed_data_suffixes = {
         ".csv",
         ".xlsx",
         ".db",
         ".sqlite",
         ".sqlite3",
+    }
+
+    allowed_knowledge_suffixes = {
+        ".md",
+        ".txt",
+        ".pdf",
     }
 
     for uploaded_file in files:
@@ -87,17 +174,17 @@ def analyze_upload(
             filename
         ).suffix.lower()
 
-        if suffix not in allowed_suffixes:
+        if suffix not in allowed_data_suffixes:
             raise HTTPException(
                 status_code=400,
                 detail=(
-                    f"Unsupported file type: "
+                    f"Unsupported data file type: "
                     f"{filename}"
                 )
             )
 
         file_path = (
-            run_upload_dir
+            data_dir
             / filename
         )
 
@@ -114,10 +201,48 @@ def analyze_upload(
             str(file_path)
         )
 
+    for uploaded_file in knowledge_files or []:
+
+        filename = Path(
+            uploaded_file.filename or ""
+        ).name
+
+        suffix = Path(
+            filename
+        ).suffix.lower()
+
+        if suffix not in allowed_knowledge_suffixes:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Unsupported knowledge file type: "
+                    f"{filename}"
+                )
+            )
+
+        file_path = (
+            knowledge_dir
+            / filename
+        )
+
+        with file_path.open(
+            "wb"
+        ) as output_file:
+
+            shutil.copyfileobj(
+                uploaded_file.file,
+                output_file
+            )
+
+        knowledge_sources.append(
+            str(file_path)
+        )
+
     try:
         result = run_analysis(
             data_sources=data_sources,
             analysis_focus=analysis_focus,
+            knowledge_sources=knowledge_sources,
             run_id=run_id
         )
 
@@ -130,6 +255,14 @@ def analyze_upload(
     return {
         "run_id": result.get(
             "run_id"
+        ),
+        "retrieved_knowledge": result.get(
+        "retrieved_knowledge",
+            []
+        ),
+        "retrieved_knowledge_details": result.get(
+        "retrieved_knowledge_details",
+            []
         ),
         "analysis_plan": result.get(
             "analysis_plan",
@@ -156,7 +289,13 @@ def analyze_upload(
         "artifacts": result.get(
             "artifacts",
             []
+        ),
+        "execution_results": make_json_safe(
+        result.get(
+        "execution_results",
+        []
         )
+     ),
     }
 
 

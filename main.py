@@ -12,11 +12,11 @@ def main():
         ],
         analysis_focus=(
             "分析不同地区的高价值客户表现，"
-           "并比较各地区高价值客户的销售贡献。"
+            "并比较各地区高价值客户的销售贡献。"
         ),
         knowledge_sources=[
-        "knowledge/business_rules.md"
-    ]
+            "knowledge/business_rules.md"
+        ]
     )
 
     print("\n=== Run ID ===")
@@ -24,20 +24,50 @@ def main():
         result.get("run_id")
     )
 
+    print("\n=== Retrieved Knowledge ===")
+    print(
+        result.get(
+            "retrieved_knowledge",
+            []
+        )
+    )
+
+    print("\n=== Retrieved Knowledge Details ===")
+    print(
+        result.get(
+            "retrieved_knowledge_details",
+            []
+        )
+    )
+
     print("\n=== Analysis Plan ===")
     print(
-        result.get("analysis_plan")
+        result.get(
+            "analysis_plan",
+            []
+        )
     )
 
     print("\n=== Execution Results ===")
     print(
-        result.get("execution_results")
+        result.get(
+            "execution_results",
+            []
+        )
     )
 
     print("\n=== Failed Tasks ===")
     print(
         result.get(
             "failed_tasks",
+            []
+        )
+    )
+
+    print("\n=== Visualization Results ===")
+    print(
+        result.get(
+            "visualization_results",
             []
         )
     )
@@ -56,14 +86,6 @@ def main():
     print(
         result.get(
             "artifacts",
-            []
-        )
-    )
-
-    print("\n=== Visualization Results ===")
-    print(
-        result.get(
-            "visualization_results",
             []
         )
     )

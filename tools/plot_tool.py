@@ -3,6 +3,9 @@
 from pathlib import Path
 from typing import Any
 import re
+import matplotlib
+
+matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
 import pandas as pd

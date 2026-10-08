@@ -223,3 +223,6 @@ __pycache__/
 
 # InsightFlow generated outputs
 outputs/
+
+# InsightFlow uploaded data
+uploads/

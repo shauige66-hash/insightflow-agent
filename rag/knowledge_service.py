@@ -3,45 +3,53 @@
 from rag.chunker import split_documents
 from rag.document_loader import load_knowledge_document
 from rag.retriever import retrieve_knowledge
-from rag.vector_store import create_vector_store
+from typing import Any
+from rag.config import DEFAULT_TOP_K
+from rag.cache_key import (build_knowledge_cache_key)
+from rag.vector_store import (
+    create_and_cache_vector_store,
+    get_cached_vector_store
+)
 
 
 def build_and_retrieve_knowledge(
     knowledge_sources: list[str],
     query: str,
-    top_k: int = 3
-) -> list[str]:
+    top_k: int = DEFAULT_TOP_K
+) -> list[dict[str, Any]]:
 
     if not knowledge_sources:
         return []
 
-    documents = []
+    cache_key = build_knowledge_cache_key(
+    knowledge_sources
+)
 
-    for source_path in knowledge_sources:
+    vector_store = get_cached_vector_store(
+        cache_key
+    )
 
-        source_documents = (
-            load_knowledge_document(
-                source_path
+    if vector_store is None:
+
+        documents = []
+
+        for source in knowledge_sources:
+            documents.extend(
+                load_knowledge_document(
+                    source
+                )
+            )
+
+        chunks = split_documents(
+            documents
+        )
+
+        vector_store = (
+            create_and_cache_vector_store(
+                documents=chunks,
+                cache_key=cache_key
             )
         )
-
-        documents.extend(
-            source_documents
-        )
-
-    if not documents:
-        return []
-
-    chunks = split_documents(
-        documents
-    )
-
-    if not chunks:
-        return []
-
-    vector_store = create_vector_store(
-        chunks
-    )
 
     retrieved_knowledge = retrieve_knowledge(
         vector_store=vector_store,

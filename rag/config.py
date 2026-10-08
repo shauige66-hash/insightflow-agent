@@ -1,0 +1,5 @@
+# 定义 Business Knowledge RAG 的默认检索参数。
+
+DEFAULT_TOP_K = 3
+VECTOR_STORE_CACHE_SIZE = 8
+MIN_SIMILARITY_SCORE = 0.35

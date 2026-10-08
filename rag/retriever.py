@@ -1,21 +1,50 @@
-# 负责根据用户分析需求，从向量库中检索最相关的业务知识。
+# 负责从向量库中检索与分析问题相关的业务知识。
+
+from typing import Any
 
 from langchain_core.vectorstores import InMemoryVectorStore
-
+from rag.config import (
+    DEFAULT_TOP_K,
+    MIN_SIMILARITY_SCORE
+)
 
 def retrieve_knowledge(
     vector_store: InMemoryVectorStore,
     query: str,
-    top_k: int = 3
-) -> list[str]:
+    top_k: int = DEFAULT_TOP_K,
+    min_score: float = MIN_SIMILARITY_SCORE
+) -> list[dict[str, Any]]:
 
-    documents = vector_store.similarity_search(
-        query=query,
-        k=top_k
+    results = (
+        vector_store.similarity_search_with_score(
+            query=query,
+            k=top_k
+        )
     )
 
-    return [
-        document.page_content.strip()
-        for document in documents
-        if document.page_content.strip()
-    ]
+    retrieved_results = []
+
+    for document, score in results:
+
+        content = document.page_content.strip()
+
+        if not content:
+            continue
+
+        if score < min_score:
+            continue
+
+        retrieved_results.append(
+            {
+                "content": content,
+                "source": document.metadata.get(
+                    "source"
+                ),
+                "page": document.metadata.get(
+                    "page"
+                ),
+                "score": float(score)
+            }
+        )
+
+    return retrieved_results

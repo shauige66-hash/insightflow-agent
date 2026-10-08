@@ -33,6 +33,7 @@ def run_analysis(
                 "analysis_focus": analysis_focus,
                 "knowledge_sources": knowledge_sources or [],
                 "retrieved_knowledge": [],
+                "retrieved_knowledge_details": [],
                 "execution_results": [],
                 "failed_tasks": [],
                 "visualization_results": [],
