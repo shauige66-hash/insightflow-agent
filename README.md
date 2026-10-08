@@ -27,6 +27,13 @@ InsightFlow 是一个基于 LangGraph 和 LangChain 构建的 Agentic 数据分�
 - 基于 FastAPI 的数据与知识文件上传接口
 - 按 Run 保存分析产物与运行日志
 
+## Demo 演示
+
+### 自动生成的数据分析报告
+
+![InsightFlow 分析报告](./docs/demo/demo-03-report.png)
+
+
 ## Agentic 工作流
 
 ![InsightFlow Architecture](./docs/assets/insightflow-architecture-zh.png)
@@ -481,6 +488,14 @@ Users can upload structured datasets and optional business knowledge documents. 
 - Markdown, HTML, and PDF report generation
 - FastAPI interface with dataset and knowledge-file upload
 - Per-run artifacts and execution observability
+
+
+## Demo & Results
+
+### Automatically Generated Analysis Report
+
+![InsightFlow Analysis Report](./docs/demo/demo-03-report.png)
+
 
 ## Agentic Workflow
 
